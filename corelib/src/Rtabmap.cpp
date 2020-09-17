@@ -2215,6 +2215,7 @@ bool Rtabmap::process(
 				landmarkDetected = iter->first;
 				landmarkDetectedNodesRef = _memory->getLandmarksInvertedIndex().find(iter->first)->second;
 				UINFO("Landmark %d observed again! Seen the first time by node %d.", -iter->first, *landmarkDetectedNodesRef.begin());
+				fullyLocalized();
 				break;
 			}
 		}
@@ -3185,6 +3186,8 @@ bool Rtabmap::process(
 			float x,y,z,roll,pitch,yaw;
 			if(_loopClosureHypothesis.first || lastProximitySpaceClosureId)
 			{
+				fullyLocalized();
+
 				// Loop closure transform
 				UASSERT(sLoop);
 				std::multimap<int, Link>::const_iterator loopIter =  sLoop->getLinks().find(signature->id());
@@ -5751,6 +5754,22 @@ void Rtabmap::updateGoalIndex()
 				_pathStuckCount = 0;
 				_pathStuckDistance = 0.0;
 			}
+		}
+	}
+}
+
+void Rtabmap::fullyLocalized() {
+	static bool fullyLocalized = false;
+	static const char *relocationFlagFile = "/tmp/relocated";
+
+	// only in Localization mode
+	if(!fullyLocalized && !_memory->isIncremental()) {
+		fullyLocalized = true;
+
+		_memory->disableMarkerDetection();
+
+		if (access(relocationFlagFile, F_OK ) != -1) {
+			remove(relocationFlagFile);
 		}
 	}
 }

@@ -247,6 +247,8 @@ public:
 			const std::map<int, Transform> & poses,
 			RegistrationInfo * info = 0);
 
+    void disableMarkerDetection() {_detectMarkers = false;};
+
 private:
 	void preUpdate();
 	void addSignatureToStm(Signature * signature, const cv::Mat & covariance);

@@ -250,6 +250,8 @@ private:
 	void setupLogFiles(bool overwrite = false);
 	void flushStatisticLogs();
 
+	void fullyLocalized();
+
 private:
 	// Modifiable parameters
 	bool _publishStats;
