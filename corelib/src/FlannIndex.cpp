@@ -312,6 +312,76 @@ void FlannIndex::buildLSHIndex(
 	UDEBUG("");
 }
 
+void FlannIndex::loadFromFile(const cv::Mat & features,
+        bool useDistanceL1,
+        std::string filename)
+{
+    UDEBUG("");
+//    this->release();
+//    UASSERT(index_ == 0);
+    UASSERT(features.type() == CV_32FC1 || features.type() == CV_8UC1);
+    featuresType_ = features.type();
+    featuresDim_ = features.cols;
+    useDistanceL1_ = useDistanceL1;
+
+    rtflann::SavedIndexParams params(filename);
+
+    if(featuresType_ == CV_8UC1)
+    {
+        index_ = new rtflann::Index<rtflann::Hamming<unsigned char> >(params);
+        ((rtflann::Index<rtflann::Hamming<unsigned char> >*)index_)->buildIndex();
+    }
+    else
+    {
+        if(useDistanceL1_)
+        {
+            index_ = new rtflann::Index<rtflann::L1<float> >(params);
+            ((rtflann::Index<rtflann::L1<float> >*)index_)->buildIndex();
+        }
+        else if(featuresDim_ <=3)
+        {
+            index_ = new rtflann::Index<rtflann::L2_Simple<float> >(params);
+            ((rtflann::Index<rtflann::L2_Simple<float> >*)index_)->buildIndex();
+        }
+        else
+        {
+            index_ = new rtflann::Index<rtflann::L2<float> >(params);
+            ((rtflann::Index<rtflann::L2<float> >*)index_)->buildIndex();
+        }
+    }
+
+    // incremental FLANN
+    addedDescriptors_.insert(std::make_pair(nextIndex_, features));
+
+    nextIndex_ = features.rows;
+    UDEBUG("");
+}
+
+void FlannIndex::saveToFile(int featureType, int featureCols,
+        bool useDistanceL1,
+        std::string filename)
+{
+    if(featureType == CV_8UC1)
+    {
+        ((rtflann::Index<rtflann::Hamming<unsigned char> >*)index_)->save(filename);
+    }
+    else
+    {
+        if(useDistanceL1)
+        {
+            ((rtflann::Index<rtflann::L1<float> >*)index_)->save(filename);
+        }
+        else if(featureCols <=3)
+        {
+            ((rtflann::Index<rtflann::L2_Simple<float> >*)index_)->save(filename);
+        }
+        else
+        {
+            ((rtflann::Index<rtflann::L2<float> >*)index_)->save(filename);
+        }
+    }
+}
+
 bool FlannIndex::isBuilt()
 {
 	return index_!=0;

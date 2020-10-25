@@ -439,66 +439,101 @@ void VWDictionary::update()
 
 			if(_notIndexedWords.size())
 			{
-				ULOGGER_DEBUG("Incremental FLANN: Inserting %d words...", (int)_notIndexedWords.size());
-				for(std::set<int>::iterator iter=_notIndexedWords.begin(); iter!=_notIndexedWords.end(); ++iter)
-				{
-					VisualWord* w = uValue(_visualWords, *iter, (VisualWord*)0);
-					UASSERT(w);
+				if (1) {
+				    ////////////////////////////////////
+				    ULOGGER_DEBUG("Incremental FLANN: Loading cached words...");
 
-					cv::Mat descriptor;
-					if(w->getDescriptor().type() == CV_8U)
-					{
-						useDistanceL1_ = true;
-						if(_strategy == kNNFlannKdTree)
-						{
-							descriptor = convertBinTo32F(w->getDescriptor());
-						}
-						else
-						{
-							descriptor = w->getDescriptor();
-						}
-					}
-					else
-					{
-						descriptor = w->getDescriptor();
-					}
+				    VisualWord* w = uValue(_visualWords, *_notIndexedWords.begin(), (VisualWord*)0);
+				    UASSERT(w);
 
-					int index = 0;
-					if(!_flannIndex->isBuilt())
-					{
-						UDEBUG("Building FLANN index...");
-						switch(_strategy)
-						{
-						case kNNFlannNaive:
-							_flannIndex->buildLinearIndex(descriptor, useDistanceL1_, _rebalancingFactor);
-							break;
-						case kNNFlannKdTree:
-							UASSERT_MSG(descriptor.type() == CV_32F, "To use KdTree dictionary, float descriptors are required!");
-							_flannIndex->buildKDTreeIndex(descriptor, KDTREE_SIZE, useDistanceL1_, _rebalancingFactor);
-							break;
-						case kNNFlannLSH:
-							UASSERT_MSG(descriptor.type() == CV_8U, "To use LSH dictionary, binary descriptors are required!");
-							_flannIndex->buildLSHIndex(descriptor, 12, 20, 2, _rebalancingFactor);
-							break;
-						default:
-							UFATAL("Not supposed to be here!");
-							break;
-						}
-						UDEBUG("Building FLANN index... done!");
-					}
-					else
-					{
-						UASSERT(descriptor.cols == _flannIndex->featuresDim());
-						UASSERT(descriptor.type() == _flannIndex->featuresType());
-						index = _flannIndex->addPoints(descriptor);
-					}
-					std::pair<std::map<int, int>::iterator, bool> inserted;
-					inserted = _mapIndexId.insert(std::pair<int, int>(index, w->id()));
-					UASSERT(inserted.second);
-					inserted = _mapIdIndex.insert(std::pair<int, int>(w->id(), index));
-					UASSERT(inserted.second);
+                    cv::Mat descriptor;
+                    if(w->getDescriptor().type() == CV_8U)
+                    {
+                        useDistanceL1_ = true;
+                        if(_strategy == kNNFlannKdTree)
+                        {
+                            descriptor = convertBinTo32F(w->getDescriptor());
+                        }
+                        else
+                        {
+                            descriptor = w->getDescriptor();
+                        }
+                    }
+                    else
+                    {
+                        descriptor = w->getDescriptor();
+                    }
+
+                    _flannIndex->loadFromFile(descriptor, useDistanceL1_, std::string("/tmp/aaa"));
+
+				    ULOGGER_DEBUG("Incremental FLANN: Loading cached words... done!");
+				    ////////////////////////////////////
+				} else {
+				    int featureType, featureCols;
+	                ULOGGER_DEBUG("Incremental FLANN: Inserting %d words...", (int)_notIndexedWords.size());
+	                for(std::set<int>::iterator iter=_notIndexedWords.begin(); iter!=_notIndexedWords.end(); ++iter)
+	                {
+	                    VisualWord* w = uValue(_visualWords, *iter, (VisualWord*)0);
+	                    UASSERT(w);
+
+	                    cv::Mat descriptor;
+	                    if(w->getDescriptor().type() == CV_8U)
+	                    {
+	                        useDistanceL1_ = true;
+	                        if(_strategy == kNNFlannKdTree)
+	                        {
+	                            descriptor = convertBinTo32F(w->getDescriptor());
+	                        }
+	                        else
+	                        {
+	                            descriptor = w->getDescriptor();
+	                        }
+	                    }
+	                    else
+	                    {
+	                        descriptor = w->getDescriptor();
+	                    }
+
+	                    int index = 0;
+	                    if(!_flannIndex->isBuilt())
+	                    {
+	                        UDEBUG("Building FLANN index...");
+	                        featureType = descriptor.type();
+	                        featureCols = descriptor.cols;
+	                        switch(_strategy)
+	                        {
+	                        case kNNFlannNaive:
+	                            _flannIndex->buildLinearIndex(descriptor, useDistanceL1_, _rebalancingFactor);
+	                            break;
+	                        case kNNFlannKdTree:
+	                            UASSERT_MSG(descriptor.type() == CV_32F, "To use KdTree dictionary, float descriptors are required!");
+	                            _flannIndex->buildKDTreeIndex(descriptor, KDTREE_SIZE, useDistanceL1_, _rebalancingFactor);
+	                            break;
+	                        case kNNFlannLSH:
+	                            UASSERT_MSG(descriptor.type() == CV_8U, "To use LSH dictionary, binary descriptors are required!");
+	                            _flannIndex->buildLSHIndex(descriptor, 12, 20, 2, _rebalancingFactor);
+	                            break;
+	                        default:
+	                            UFATAL("Not supposed to be here!");
+	                            break;
+	                        }
+	                        UDEBUG("Building FLANN index... done!");
+	                    }
+	                    else
+	                    {
+	                        UASSERT(descriptor.cols == _flannIndex->featuresDim());
+	                        UASSERT(descriptor.type() == _flannIndex->featuresType());
+	                        index = _flannIndex->addPoints(descriptor);
+	                    }
+	                    std::pair<std::map<int, int>::iterator, bool> inserted;
+	                    inserted = _mapIndexId.insert(std::pair<int, int>(index, w->id()));
+	                    UASSERT(inserted.second);
+	                    inserted = _mapIdIndex.insert(std::pair<int, int>(w->id(), index));
+	                    UASSERT(inserted.second);
+	                }
+	                ULOGGER_DEBUG("Incremental FLANN: Inserting %d words... done!", (int)_notIndexedWords.size());
+	                _flannIndex->saveToFile(featureType, featureCols, useDistanceL1_, std::string("/tmp/aaa"));
 				}
-				ULOGGER_DEBUG("Incremental FLANN: Inserting %d words... done!", (int)_notIndexedWords.size());
 			}
 		}
 		else if(_strategy >= kNNBruteForce &&

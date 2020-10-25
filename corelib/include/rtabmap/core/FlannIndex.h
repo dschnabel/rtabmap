@@ -68,6 +68,13 @@ public:
 			unsigned int key_size = 20,
 			unsigned int multi_probe_level = 2,
 			float rebalancingFactor = 2.0f);
+	void loadFromFile(
+	        const cv::Mat & features,
+	        bool useDistanceL1,
+	        std::string filename);
+	void saveToFile(int featureType, int featureCols,
+	        bool useDistanceL1,
+	        std::string filename);
 
 	bool isBuilt();
 
